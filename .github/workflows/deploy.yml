@@ -1,0 +1,65 @@
+name: Laravel CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - development
+  pull_request:
+    branches:
+      - main
+      - development
+
+jobs:
+  # CI Job: Tests and build
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Install Composer
+        run: |
+          curl -sS https://getcomposer.org/installer | php
+          php composer.phar install --no-interaction
+
+      - name: Set up .env
+        run: cp .env.example .env
+
+      - name: Generate Laravel Key
+        run: php artisan key:generate
+
+      - name: Run Tests
+        run: php artisan test
+
+  # CD Job: Deploy to your server
+  cd:
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Install Composer
+        run: |
+          curl -sS https://getcomposer.org/installer | php
+          php composer.phar install --no-interaction
+
+      - name: Set up .env
+        run: cp .env.example .env
+
+      - name: Deploy to Server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          ssh -o StrictHostKeyChecking=no user@your-server-ip 'cd /path/to/your/project && git pull origin main && php artisan migrate --force'
